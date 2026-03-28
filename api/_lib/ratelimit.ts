@@ -1,4 +1,4 @@
-import { createHash } from 'node:crypto';
+import { createHash } from 'crypto';
 
 const FREE_ANALYSIS_LIMIT = 3;
 const THIRTY_DAYS = 60 * 60 * 24 * 30;

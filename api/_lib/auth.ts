@@ -1,4 +1,4 @@
-import { createHmac, timingSafeEqual } from 'node:crypto';
+import { createHmac, timingSafeEqual } from 'crypto';
 
 const SECRET = process.env.JWT_SECRET ?? 'dev-secret-change-me';
 
