@@ -1,0 +1,5 @@
+{
+  "name": "Reddit Pain Point Extractor",
+  "description": "Filters Reddit posts for pain points, frustrations, and unmet needs using the Gemini API.",
+  "requestFramePermissions": []
+}
