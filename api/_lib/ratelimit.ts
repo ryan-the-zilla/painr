@@ -1,7 +1,13 @@
-import { kv } from '@vercel/kv';
-
 const FREE_ANALYSIS_LIMIT = 3;
 const THIRTY_DAYS = 60 * 60 * 24 * 30;
+
+const kvAvailable = !!(process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN);
+
+async function getKV() {
+  if (!kvAvailable) return null;
+  const { kv } = await import('@vercel/kv');
+  return kv;
+}
 
 export async function getFingerprint(ip: string, ua: string): Promise<string> {
   const data = new TextEncoder().encode(ip + '|' + ua);
@@ -10,6 +16,9 @@ export async function getFingerprint(ip: string, ua: string): Promise<string> {
 }
 
 export async function checkAndIncrementFreeUsage(fingerprint: string): Promise<{ allowed: boolean; remaining: number }> {
+  const kv = await getKV();
+  if (!kv) return { allowed: true, remaining: FREE_ANALYSIS_LIMIT };
+
   const key = `usage:${fingerprint}`;
   const count = (await kv.get<number>(key)) ?? 0;
 
@@ -22,5 +31,7 @@ export async function checkAndIncrementFreeUsage(fingerprint: string): Promise<{
 }
 
 export async function getFreeUsageCount(fingerprint: string): Promise<number> {
+  const kv = await getKV();
+  if (!kv) return 0;
   return (await kv.get<number>(`usage:${fingerprint}`)) ?? 0;
 }

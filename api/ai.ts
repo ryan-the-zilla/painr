@@ -6,11 +6,13 @@ const ALLOWED_ORIGIN = process.env.ALLOWED_ORIGIN ?? 'http://localhost:3000';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   const origin = req.headers.origin as string | undefined;
-  const allowed = [ALLOWED_ORIGIN, 'http://localhost:3000'];
-  if (origin && allowed.includes(origin)) {
-    res.setHeader('Access-Control-Allow-Origin', origin);
-    res.setHeader('Vary', 'Origin');
-  } else if (origin) {
+  const allowed = [ALLOWED_ORIGIN, 'http://localhost:3000', 'http://localhost:5173'];
+  if (!origin || allowed.includes(origin)) {
+    if (origin) {
+      res.setHeader('Access-Control-Allow-Origin', origin);
+      res.setHeader('Vary', 'Origin');
+    }
+  } else {
     return res.status(403).json({ error: 'Forbidden' });
   }
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');

@@ -13,6 +13,10 @@ export default defineConfig({
   server: {
     hmr: process.env.DISABLE_HMR !== 'true',
     proxy: {
+      '/api': {
+        target: 'http://localhost:3001',
+        changeOrigin: true,
+      },
       '/reddit-api': {
         target: 'https://www.reddit.com',
         changeOrigin: true,
