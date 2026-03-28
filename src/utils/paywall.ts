@@ -6,6 +6,7 @@ export const FREE_VISIBLE_PAIN_POINTS = 5;
 const STORAGE_KEY = 'rppe_usage';
 const PRO_KEY = 'rppe_pro';
 const DEV_KEY = 'rppe_dev';
+const TOKEN_KEY = 'rppe_token';
 
 declare global {
   interface Window {
@@ -88,10 +89,24 @@ export async function activateSession(sessionId: string): Promise<{ success: boo
       activatedAt: Date.now(),
     };
     localStorage.setItem(PRO_KEY, JSON.stringify(proData));
+    if (data.token) localStorage.setItem(TOKEN_KEY, data.token);
     return { success: true, plan: data.plan };
   } catch (e: any) {
     return { success: false, error: e.message };
   }
+}
+
+export function getAuthToken(): string | null {
+  try {
+    return localStorage.getItem(TOKEN_KEY);
+  } catch {
+    return null;
+  }
+}
+
+export function getAuthHeaders(): Record<string, string> {
+  const token = getAuthToken();
+  return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
 export function canRunAnalysis(): boolean {

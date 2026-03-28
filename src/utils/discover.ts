@@ -1,9 +1,11 @@
+import { getAuthHeaders } from './paywall';
+
 const AI_ENDPOINT = '/api/ai';
 
 export async function discoverSubredditsAI(niche: string): Promise<string[]> {
   const res = await fetch(AI_ENDPOINT, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
     body: JSON.stringify({
       model: 'glm-4.7',
       messages: [

@@ -6,7 +6,7 @@ import { fetchAllPosts, timeAgo, type RedditPost, type FetchProgress } from './u
 import { findStaticSubreddits } from './utils/niches';
 import { discoverSubredditsAI } from './utils/discover';
 import { saveSession, listSessions, deleteSession, generateId, type Session } from './utils/session';
-import { canRunAnalysis, getRemainingFree, incrementUsage, isPro, activateSession, activateDev, getProData, MONTHLY_URL, LIFETIME_URL, FREE_VISIBLE_PAIN_POINTS } from './utils/paywall';
+import { getRemainingFree, incrementUsage, isPro, activateSession, activateDev, getProData, getAuthHeaders, MONTHLY_URL, LIFETIME_URL, FREE_VISIBLE_PAIN_POINTS } from './utils/paywall';
 import { saveProfile, getProfile, getProfileOnboardingStatus, setProfileOnboardingStatus as persistProfileOnboardingStatus, isProfileComplete, isRelevantCategory, type ProfileOnboardingStatus, type UserProfile, type UserRole } from './utils/profile';
 import { buildSkillGroups, getRoleLabel } from './utils/profileCatalog';
 
@@ -89,7 +89,7 @@ function PostCard({ post, num }: { post: RedditPost; num: number }) {
   );
 }
 
-function PainPointCard({ point, index, blurred, onUpgrade, relevant }: { point: PainPoint; index: number; blurred?: boolean; onUpgrade?: () => void; relevant?: boolean }) {
+function PainPointCard({ point, index, relevant }: { point: PainPoint; index: number; relevant?: boolean }) {
   const link = point.reddit_link.startsWith('http') ? point.reddit_link : `https://reddit.com${point.reddit_link}`;
   const [copied, setCopied] = useState(false);
 
@@ -98,22 +98,6 @@ function PainPointCard({ point, index, blurred, onUpgrade, relevant }: { point: 
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
-
-  if (blurred) {
-    return (
-      <div className="pain-card pain-card-blurred" style={{ animationDelay: `${index * 0.05}s` }} onClick={onUpgrade}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-          <span className="category-badge">{point.category}</span>
-          <span className="score-badge">&uarr; {point.score}</span>
-        </div>
-        <h3 className="pain-title" style={{ filter: 'blur(5px)', userSelect: 'none' }}>{point.title}</h3>
-        <p className="pain-summary" style={{ filter: 'blur(5px)', userSelect: 'none' }}>{point.pain_summary}</p>
-        <div className="blur-upgrade-cta">
-          <Lock size={14} /> <span>Upgrade naar Pro om te lezen</span>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="pain-card" style={{ animationDelay: `${index * 0.05}s` }}>
@@ -186,6 +170,7 @@ export default function App() {
   const [analyzedCount, setAnalyzedCount] = useState(0);
 
   const [painPoints, setPainPoints] = useState<PainPoint[]>([]);
+  const [totalPainPointsFound, setTotalPainPointsFound] = useState(0);
   const [isProcessing, setIsProcessing] = useState(false);
   const [progress, setProgress] = useState({ processed: 0, total: 0 });
   const [activeModel, setActiveModel] = useState<string>(MODEL_CHAIN[0]);
@@ -311,6 +296,7 @@ export default function App() {
     setDiscoveryWarning(null);
     setParsedPosts([]);
     setPainPoints([]);
+    setTotalPainPointsFound(0);
     setFetchStatus(null);
     setFetchingSub(null);
     setError(null);
@@ -407,48 +393,9 @@ export default function App() {
     }
   };
 
-  const callGeminiWithFallback = async (prompt: string): Promise<string | null> => {
-    for (const model of MODEL_CHAIN) {
-      try {
-        const res = await fetch(AI_ENDPOINT, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            model,
-            messages: [
-              { role: 'system', content: 'You are a pain point extractor. Return only valid JSON array, no markdown, no explanation.' },
-              { role: 'user', content: prompt },
-            ],
-            temperature: 0.3,
-          }),
-        });
-        if (!res.ok) {
-          const status = res.status;
-          if (status === 429 || status === 503) continue;
-          throw new Error(`z.ai API fout: ${status}`);
-        }
-        const data = await res.json();
-        const text = data?.choices?.[0]?.message?.content || null;
-        if (model !== activeModel) setActiveModel(model);
-        return text;
-      } catch (e: any) {
-        const msg = (e?.message || '').toLowerCase();
-        if (msg.includes('z.ai api fout: 429') || msg.includes('z.ai api fout: 503')) continue;
-        throw e;
-      }
-    }
-    throw new Error('Alle modellen zijn overbelast. Probeer het later opnieuw.');
-  };
-
   const processPosts = async () => {
     if (parsedPosts.length === 0) return;
-    if (!canRunAnalysis()) {
-      setShowUpgrade(true);
-      return;
-    }
-    incrementUsage();
 
-    // Free users: analyseer alles. Pro users: respecteer analyzeLimit
     const limit = proStatus ? analyzeLimit : 0;
     const postsToAnalyze = [...parsedPosts]
       .sort((a, b) => b.created_utc - a.created_utc)
@@ -461,87 +408,49 @@ export default function App() {
     setSummary(null);
     setAnalyzedCount(postsToAnalyze.length);
     setProgress({ processed: 0, total: postsToAnalyze.length });
-    const allResults: PainPoint[] = [];
-    const totalBatches = Math.ceil(postsToAnalyze.length / BATCH_SIZE);
-
-    const CONCURRENCY = 3;
-    const processBatch = async (batch: RedditPost[], batchIdx: number) => {
-      const prompt = `Analyze these Reddit posts. Return only posts with a real problem, frustration, or unmet need. Ignore spam and self-promotion. Return JSON array: [{title, pain_summary, category, reddit_link, score}]
-
-Posts:
-${JSON.stringify(batch.map(p => ({ t: p.title, b: p.selftext.slice(0, 300), l: p.permalink, s: p.score })))}`;
-
-      const text = await callGeminiWithFallback(prompt);
-      if (text) {
-        let cleaned = text.trim();
-        if (cleaned.startsWith('```')) {
-          cleaned = cleaned.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '').trim();
-        }
-        try {
-          return JSON.parse(cleaned) as PainPoint[];
-        } catch {
-          console.warn(`Batch ${batchIdx + 1}/${totalBatches}: JSON parse mislukt`);
-        }
-      }
-      return [];
-    };
 
     try {
-      // Verwerk batches in groepen van CONCURRENCY parallel
-      for (let i = 0; i < postsToAnalyze.length; i += BATCH_SIZE * CONCURRENCY) {
-        const group = [];
-        for (let j = 0; j < CONCURRENCY && i + j * BATCH_SIZE < postsToAnalyze.length; j++) {
-          const start = i + j * BATCH_SIZE;
-          const batch = postsToAnalyze.slice(start, start + BATCH_SIZE);
-          group.push(processBatch(batch, Math.floor(start / BATCH_SIZE)));
+      const res = await fetch('/api/analyze', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+        body: JSON.stringify({ posts: postsToAnalyze.map(p => ({ title: p.title, selftext: p.selftext, permalink: p.permalink, score: p.score })) }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        if (res.status === 403 && data.error === 'limit_reached') {
+          setShowUpgrade(true);
+          setStep(3);
+          return;
         }
-        const results = await Promise.allSettled(group);
-        for (const r of results) {
-          if (r.status === 'fulfilled') allResults.push(...r.value);
-        }
-        setPainPoints([...allResults]);
-        setProgress({ processed: Math.min(i + BATCH_SIZE * CONCURRENCY, postsToAnalyze.length), total: postsToAnalyze.length });
+        throw new Error(data.error || `Server fout: ${res.status}`);
       }
+
+      const data = await res.json();
+      setPainPoints(data.painPoints ?? []);
+      setTotalPainPointsFound(data.totalFound ?? data.painPoints?.length ?? 0);
+      setSummary(data.summary ?? null);
+      setAnalyzedCount(data.totalFound ?? data.painPoints?.length ?? 0);
+      setProgress({ processed: postsToAnalyze.length, total: postsToAnalyze.length });
+      incrementUsage();
+
+      // Auto-save sessie
+      const sess: Session = {
+        id: sessionIdRef.current,
+        niche: nicheInput,
+        subreddits: Array.from(selectedSubs),
+        posts: parsedPosts,
+        painPoints: data.painPoints ?? [],
+        summary: data.summary ?? null,
+        createdAt: Date.now(),
+      };
+      saveSession(sess);
+      setSessions(listSessions());
     } catch (err: any) {
       setError(`AI-analyse mislukt: ${err.message || 'Er ging iets mis bij het verwerken.'}`);
     } finally {
       setIsProcessing(false);
     }
-
-    // AI samenvatting genereren na analyse
-    if (allResults.length > 0) {
-      try {
-        const res = await fetch(AI_ENDPOINT, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            model: 'glm-4.7',
-            messages: [
-              { role: 'system', content: 'Return only valid JSON, no markdown.' },
-              { role: 'user', content: `Analyze these pain points and return a summary. Return JSON: {"summary": ["bullet1","bullet2","bullet3"], "top_categories": ["cat1","cat2","cat3"]}\n\nPain points:\n${JSON.stringify(allResults.map(p => ({ title: p.title, category: p.category, summary: p.pain_summary })))}` },
-            ],
-            temperature: 0.3,
-          }),
-        });
-        const data = await res.json();
-        let text = data?.choices?.[0]?.message?.content || '';
-        if (text.startsWith('```')) text = text.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '').trim();
-        setSummary(JSON.parse(text));
-      } catch { /* samenvatting is optioneel */ }
-    }
-
-    // Auto-save sessie
-    const sess: Session = {
-      id: sessionIdRef.current,
-      niche: nicheInput,
-      subreddits: Array.from(selectedSubs),
-      posts: parsedPosts,
-      painPoints: allResults,
-      summary: null,
-      createdAt: Date.now(),
-    };
-    saveSession(sess);
-    setSessions(listSessions());
   };
 
   const loadSession = (s: Session) => {
@@ -1121,7 +1030,7 @@ ${JSON.stringify(batch.map(p => ({ t: p.title, b: p.selftext.slice(0, 300), l: p
                 <div className="results-header card fade-in">
                   <div>
                     <h2 className="results-title">
-                      {isProcessing ? `${painPoints.length} pijnpunten gevonden (bezig...)` : `${painPoints.length} pijnpunten gevonden`}
+                      {isProcessing ? `${painPoints.length} pijnpunten gevonden (bezig...)` : `${totalPainPointsFound || painPoints.length} pijnpunten gevonden`}
                     </h2>
                     <p className="results-subtitle">Uit {analyzedCount} geanalyseerde posts · {parsedPosts.length} totaal opgehaald</p>
                   </div>
@@ -1130,19 +1039,19 @@ ${JSON.stringify(batch.map(p => ({ t: p.title, b: p.selftext.slice(0, 300), l: p
                 <div className="pain-grid">
                   {filteredPainPoints.map((point, idx) => (
                     <React.Fragment key={idx}>
-                      {!proStatus && idx === FREE_VISIBLE_PAIN_POINTS && (
-                        <div className="upgrade-banner" onClick={() => setShowUpgrade(true)}>
-                          <Zap size={18} style={{ color: '#a78bfa' }} />
-                          <div>
-                            <div style={{ fontWeight: 700, fontSize: '0.95rem' }}>+{filteredPainPoints.length - FREE_VISIBLE_PAIN_POINTS} pijnpunten gevonden</div>
-                            <div style={{ fontSize: '0.8rem', color: '#888' }}>Upgrade naar Pro om alles te zien</div>
-                          </div>
-                          <ArrowRight size={16} style={{ color: '#a78bfa', marginLeft: 'auto' }} />
-                        </div>
-                      )}
-                      <PainPointCard point={point} index={idx} blurred={!proStatus && idx >= FREE_VISIBLE_PAIN_POINTS} onUpgrade={() => setShowUpgrade(true)} relevant={isRelevantCategory(point.category, profile)} />
+                      <PainPointCard point={point} index={idx} relevant={isRelevantCategory(point.category, profile)} />
                     </React.Fragment>
                   ))}
+                  {!proStatus && totalPainPointsFound > FREE_VISIBLE_PAIN_POINTS && (
+                    <div className="upgrade-banner" onClick={() => setShowUpgrade(true)}>
+                      <Zap size={18} style={{ color: '#a78bfa' }} />
+                      <div>
+                        <div style={{ fontWeight: 700, fontSize: '0.95rem' }}>+{totalPainPointsFound - FREE_VISIBLE_PAIN_POINTS} pijnpunten beschikbaar</div>
+                        <div style={{ fontSize: '0.8rem', color: '#888' }}>Upgrade naar Pro om alles te zien</div>
+                      </div>
+                      <ArrowRight size={16} style={{ color: '#a78bfa', marginLeft: 'auto' }} />
+                    </div>
+                  )}
                 </div>
               </>
             )}
