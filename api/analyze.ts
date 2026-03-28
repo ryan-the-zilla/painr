@@ -72,9 +72,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   // Rate limit free users
   if (!isPro) {
-    const ip = (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() ?? req.socket.remoteAddress ?? 'unknown';
+    const ip = (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() ?? req.socket?.remoteAddress ?? 'unknown';
     const ua = (req.headers['user-agent'] as string) ?? '';
-    const fingerprint = await getFingerprint(ip, ua);
+    const fingerprint = getFingerprint(ip, ua);
     const usage = await checkAndIncrementFreeUsage(fingerprint);
     if (!usage.allowed) {
       return res.status(403).json({

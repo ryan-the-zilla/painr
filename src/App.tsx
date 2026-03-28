@@ -94,7 +94,7 @@ function PainPointCard({ point, index, relevant }: { point: PainPoint; index: nu
   const [copied, setCopied] = useState(false);
 
   const handleCopy = () => {
-    navigator.clipboard.writeText(`${point.title}\n\n${point.pain_summary}\n\nCategorie: ${point.category} | Score: ${point.score}\n${link}`);
+    navigator.clipboard.writeText(`${point.title}\n\n${point.pain_summary}\n\nCategory: ${point.category} | Score: ${point.score}\n${link}`);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
@@ -104,7 +104,7 @@ function PainPointCard({ point, index, relevant }: { point: PainPoint; index: nu
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
         <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
           <span className="category-badge">{point.category}</span>
-          {relevant && <span className="relevant-badge">Voor jou</span>}
+          {relevant && <span className="relevant-badge">For you</span>}
         </div>
         <span className="score-badge">&uarr; {point.score}</span>
       </div>
@@ -112,10 +112,10 @@ function PainPointCard({ point, index, relevant }: { point: PainPoint; index: nu
       <p className="pain-summary">{point.pain_summary}</p>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 12 }}>
         <button onClick={handleCopy} className={`copy-btn ${copied ? 'copied' : ''}`}>
-          {copied ? <><Check size={12} /> Gekopieerd</> : <><Copy size={12} /> Kopieer</>}
+          {copied ? <><Check size={12} /> Copied</> : <><Copy size={12} /> Copy</>}
         </button>
         <a href={link} target="_blank" rel="noopener noreferrer" className="pain-link">
-          <ExternalLink size={13} /> Bekijk post
+          <ExternalLink size={13} /> View post
         </a>
       </div>
     </div>
@@ -124,10 +124,10 @@ function PainPointCard({ point, index, relevant }: { point: PainPoint; index: nu
 
 function StepIndicator({ current }: { current: Step }) {
   const steps = [
-    { n: 1, label: 'Niche kiezen' },
+    { n: 1, label: 'Choose niche' },
     { n: 2, label: 'Subreddits' },
-    { n: 3, label: 'Posts bekijken' },
-    { n: 4, label: 'Pijnpunten' },
+    { n: 3, label: 'Browse posts' },
+    { n: 4, label: 'Pain points' },
   ];
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 0, marginBottom: 32 }}>
@@ -227,7 +227,7 @@ export default function App() {
 
   const persistProfile = () => {
     if (!profileRole) {
-      setProfileFormError('Kies eerst je rol. Daarmee rankt Painr de resultaten slimmer voor jou.');
+      setProfileFormError('Please select your role. This helps Painr rank results smarter for you.');
       return false;
     }
 
@@ -264,13 +264,13 @@ export default function App() {
   const activateLicenseKey = () => {
     if (activateDev(licenseKey.trim())) {
       setProStatus(true);
-      setLicenseMsg({ ok: true, text: 'Pro geactiveerd!' });
+      setLicenseMsg({ ok: true, text: 'Pro activated!' });
     } else {
-      setLicenseMsg({ ok: false, text: 'Ongeldige key' });
+      setLicenseMsg({ ok: false, text: 'Invalid key' });
     }
   };
 
-  // Na Stripe betaling
+  // After Stripe payment
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const sessionId = params.get('session_id');
@@ -283,7 +283,7 @@ export default function App() {
         setProStatus(true);
         setShowUpgrade(false);
       } else {
-        setActivateError(result.error ?? 'Activatie mislukt');
+        setActivateError(result.error ?? 'Activation failed');
       }
     });
   }, []);
@@ -321,7 +321,7 @@ export default function App() {
       const aiSubs = await discoverSubredditsAI(nicheInput);
       const merged = [...new Set([...staticSubs, ...aiSubs])];
       if (merged.length === 0) {
-        throw new Error('Kon geen subreddits vinden voor deze niche.');
+        throw new Error('No subreddits found for this niche.');
       }
       setSuggestedSubs(merged);
       setSelectedSubs(new Set(merged));
@@ -330,10 +330,10 @@ export default function App() {
       if (staticSubs.length > 0) {
         setSuggestedSubs(staticSubs);
         setSelectedSubs(new Set(staticSubs));
-        setDiscoveryWarning('AI-suggesties konden tijdelijk niet geladen worden. Je kan wel verder met de vaste subredditselectie.');
+        setDiscoveryWarning('AI suggestions could not be loaded. You can continue with the static subreddit selection.');
         setStep(2);
       } else {
-        setError(e.message || 'Kon geen subreddits vinden');
+        setError(e.message || 'Could not find subreddits');
       }
     } finally {
       setIsDiscovering(false);
@@ -364,7 +364,7 @@ export default function App() {
     };
 
     try {
-      // Alle subreddits parallel fetchen
+      // Fetch all subreddits in parallel
       const selectedSubList = Array.from(selectedSubs.values()) as string[];
 
       await Promise.allSettled(
@@ -423,7 +423,7 @@ export default function App() {
           setStep(3);
           return;
         }
-        throw new Error(data.error || `Server fout: ${res.status}`);
+        throw new Error(data.error || `Server error: ${res.status}`);
       }
 
       const data = await res.json();
@@ -447,7 +447,7 @@ export default function App() {
       saveSession(sess);
       setSessions(listSessions());
     } catch (err: any) {
-      setError(`AI-analyse mislukt: ${err.message || 'Er ging iets mis bij het verwerken.'}`);
+      setError(`Analysis failed: ${err.message || 'Something went wrong while processing.'}`);
     } finally {
       setIsProcessing(false);
     }
@@ -506,18 +506,18 @@ export default function App() {
 
   const exportToMarkdown = () => {
     if (painPoints.length === 0) return;
-    const lines = [`# Pain Points — ${nicheInput}\n`, `> ${painPoints.length} pijnpunten · ${new Date().toLocaleDateString('nl-NL')}\n`];
+    const lines = [`# Pain Points — ${nicheInput}\n`, `> ${painPoints.length} pain points · ${new Date().toLocaleDateString('en-US')}\n`];
     if (summary) {
-      lines.push(`## Samenvatting\n`);
+      lines.push(`## Summary\n`);
       summary.summary.forEach(s => lines.push(`- ${s}`));
-      lines.push(`\n**Top categorieën:** ${summary.top_categories.join(', ')}\n`);
+      lines.push(`\n**Top categories:** ${summary.top_categories.join(', ')}\n`);
     }
     lines.push(`---\n`);
     painPoints.forEach(p => {
       const link = p.reddit_link.startsWith('http') ? p.reddit_link : `https://reddit.com${p.reddit_link}`;
       lines.push(`## ${p.title}\n`);
       lines.push(`${p.pain_summary}\n`);
-      lines.push(`**Categorie:** ${p.category} | **Score:** ↑${p.score} | [Bekijk post](${link})\n`);
+      lines.push(`**Category:** ${p.category} | **Score:** ↑${p.score} | [View post](${link})\n`);
       lines.push(`---\n`);
     });
     const blob = new Blob([lines.join('\n')], { type: 'text/markdown' });
@@ -526,7 +526,7 @@ export default function App() {
     document.body.appendChild(a); a.click(); document.body.removeChild(a);
   };
 
-  // Pijnpunten filteren + sorteren
+  // Filter + sort pain points
   const filteredPainPoints = painPoints
     .filter(p => ppCategory === 'all' || p.category === ppCategory)
     .filter(p => !ppFilter || p.title.toLowerCase().includes(ppFilter.toLowerCase()) || p.pain_summary.toLowerCase().includes(ppFilter.toLowerCase()))
@@ -566,7 +566,7 @@ export default function App() {
   const shouldShowOnboarding = step === 1 && !profile && onboardingStatus === 'unseen';
   const shouldShowProfileReminder = step === 1 && !shouldShowOnboarding && !isComplete;
   const showProfileAttention = !shouldShowOnboarding && !isComplete;
-  const profileButtonLabel = isComplete && profile ? (profile.name.trim() || getRoleLabel(profile.role)) : 'Profiel';
+  const profileButtonLabel = isComplete && profile ? (profile.name.trim() || getRoleLabel(profile.role)) : 'Profile';
   const canSubmitProfile = Boolean(profileRole);
   const profileSkillGroups = buildSkillGroups(profileRole, profileSkills);
   const proData = getProData();
@@ -585,12 +585,12 @@ export default function App() {
               <button onClick={handleProfileButtonClick} className={`btn-secondary profile-trigger ${showProfileAttention ? 'attention' : ''}`} style={{ fontSize: '0.78rem', display: 'flex', alignItems: 'center', gap: 6 }}>
                 <User size={13} />
                 {profileButtonLabel}
-                {showProfileAttention && <span className="profile-trigger-badge">Onvolledig</span>}
+                {showProfileAttention && <span className="profile-trigger-badge">Incomplete</span>}
               </button>
             {sessions.length > 0 && (
               <div style={{ position: 'relative' }}>
                 <button onClick={() => setShowSessions(s => !s)} className="btn-secondary" style={{ fontSize: '0.78rem' }}>
-                  <FileText size={13} /> Sessies ({sessions.length})
+                  <FileText size={13} /> Sessions ({sessions.length})
                 </button>
                 {showSessions && (
                   <div className="sessions-dropdown">
@@ -598,7 +598,7 @@ export default function App() {
                       <div key={s.id} className="session-item">
                         <button onClick={() => loadSession(s)} className="session-load">
                           <span style={{ fontWeight: 600 }}>{s.niche}</span>
-                          <span style={{ color: '#555', fontSize: '0.75rem' }}>{s.painPoints.length} pijnpunten · {new Date(s.createdAt).toLocaleDateString('nl-NL')}</span>
+                          <span style={{ color: '#555', fontSize: '0.75rem' }}>{s.painPoints.length} pain points · {new Date(s.createdAt).toLocaleDateString('en-US')}</span>
                         </button>
                         <button onClick={() => removeSession(s.id)} className="session-delete">×</button>
                       </div>
@@ -615,7 +615,7 @@ export default function App() {
         {/* Activatie loader */}
         {activating && (
           <div className="error-box" style={{ background: 'rgba(99,102,241,0.12)', borderColor: '#6366f1', color: '#a5b4fc' }}>
-            <Loader2 size={15} className="spin" /> Betaling verifiëren...
+            <Loader2 size={15} className="spin" /> Verifying payment...
           </div>
         )}
         {activateError && (
@@ -625,13 +625,13 @@ export default function App() {
         )}
         {proStatus && !activating && (
           <div className="error-box" style={{ background: 'rgba(74,222,128,0.08)', borderColor: '#4ade80', color: '#4ade80', marginBottom: 8 }}>
-            <Zap size={14} /> Pro actief — {proData?.plan === 'lifetime' ? 'Lifetime' : 'Maandelijks'} · {proData?.email}
+            <Zap size={14} /> Pro active — {proData?.plan === 'lifetime' ? 'Lifetime' : 'Monthly'} · {proData?.email}
           </div>
         )}
         {!proStatus && (
           <div style={{ textAlign: 'right', marginBottom: 8 }}>
-            <span style={{ fontSize: '0.75rem', color: '#666' }}>{getRemainingFree()} gratis analyse{getRemainingFree() !== 1 ? 's' : ''} resterend · </span>
-            <button onClick={() => setShowUpgrade(true)} style={{ fontSize: '0.75rem', color: '#a78bfa', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>Upgrade naar Pro</button>
+            <span style={{ fontSize: '0.75rem', color: '#666' }}>{getRemainingFree()} free analysis{getRemainingFree() !== 1 ? 'es' : ''} remaining · </span>
+            <button onClick={() => setShowUpgrade(true)} style={{ fontSize: '0.75rem', color: '#a78bfa', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>Upgrade to Pro</button>
           </div>
         )}
 
@@ -659,53 +659,53 @@ export default function App() {
                 <div className="onboarding-progress">
                   <div className={`onboarding-progress-item ${onboardingStep === 'intro' ? 'active' : 'done'}`}>
                     <span className="onboarding-progress-index">1</span>
-                    <span>Welkom</span>
+                    <span>Welcome</span>
                   </div>
                   <div className={`onboarding-progress-item ${onboardingStep === 'details' ? 'active' : ''}`}>
                     <span className="onboarding-progress-index">2</span>
-                    <span>Profiel</span>
+                    <span>Profile</span>
                   </div>
                 </div>
 
                 {onboardingStep === 'intro' ? (
                   <div className="onboarding-shell">
                     <div className="onboarding-hero">
-                      <span className="onboarding-kicker">Eerste keer in Painr</span>
-                      <h2 className="onboarding-title">Zet je profiel netjes klaar voor betere ranking</h2>
+                      <span className="onboarding-kicker">First time in Painr</span>
+                      <h2 className="onboarding-title">Set up your profile for better ranking</h2>
                       <p className="onboarding-copy">
-                        Painr werkt het best als het weet wie je bent en voor welke rol de pijnpunten belangrijk zijn. Je kan nog steeds overslaan.
+                        Painr works best when it knows your role. You can still skip this.
                       </p>
                       <div className="onboarding-benefits">
                         <div className="onboarding-benefit">
                           <span className="onboarding-benefit-dot" />
-                          Je rol is genoeg om de ranking slimmer te maken.
+                          Your role is enough to make ranking smarter.
                         </div>
                         <div className="onboarding-benefit">
                           <span className="onboarding-benefit-dot" />
-                          Relevante categorieën komen sneller bovenaan.
+                          Relevant categories rise to the top.
                         </div>
                         <div className="onboarding-benefit">
                           <span className="onboarding-benefit-dot" />
-                          Skills kan je later rustig aanvullen in Profiel.
+                          You can add skills later in Profile.
                         </div>
                       </div>
                     </div>
 
                     <div className="onboarding-panel">
                       <div className="onboarding-panel-box">
-                        <span className="onboarding-label">Waarom nu?</span>
-                        <h3>Een korte setup, daarna voelt de rest direct persoonlijker.</h3>
+                        <span className="onboarding-label">Why now?</span>
+                        <h3>A quick setup makes everything feel more personal.</h3>
                         <p>
-                          We vragen nu alleen je rol en eventueel je naam. Geen account, geen lange form, gewoon een schone start.
+                          We only ask for your role and optionally your name. No account, no long form.
                         </p>
                       </div>
 
                       <div className="onboarding-actions">
                         <button type="button" onClick={() => setOnboardingStep('details')} className="btn-primary">
-                          Profiel instellen <ArrowRight size={14} />
+                          Set up profile <ArrowRight size={14} />
                         </button>
                         <button type="button" onClick={handleSkipProfileSetup} className="btn-secondary">
-                          Overslaan
+                          Skip
                         </button>
                       </div>
                     </div>
@@ -713,10 +713,10 @@ export default function App() {
                 ) : (
                   <div className="onboarding-details fade-in">
                     <div>
-                      <span className="onboarding-kicker">Profiel</span>
-                      <h2 className="onboarding-title onboarding-title-small">Maak je profiel compleet</h2>
+                      <span className="onboarding-kicker">Profile</span>
+                      <h2 className="onboarding-title onboarding-title-small">Complete your profile</h2>
                       <p className="onboarding-copy">
-                        Kies je rol om de ranking op maat te zetten. Je naam is optioneel. Skills vul je later aan in Profiel.
+                        Choose your role to personalize ranking. Name is optional. Add skills later in Profile.
                       </p>
                     </div>
 
@@ -735,18 +735,18 @@ export default function App() {
                     />
 
                     <p className="profile-panel-note">
-                      Later kan je in Profiel nog tot 5 skills toevoegen zonder deze flow te onderbreken.
+                      You can add up to 5 skills later in Profile without interrupting your flow.
                     </p>
 
                     <div className="onboarding-actions onboarding-actions-end">
                       <button type="button" onClick={() => setOnboardingStep('intro')} className="btn-secondary">
-                        <ArrowLeft size={14} /> Terug
+                        <ArrowLeft size={14} /> Back
                       </button>
                       <button type="button" onClick={handleSkipProfileSetup} className="btn-secondary">
-                        Overslaan
+                        Skip
                       </button>
                       <button type="button" onClick={handleOnboardingSave} className="btn-primary" disabled={!canSubmitProfile}>
-                        <Check size={14} /> Opslaan en doorgaan
+                        <Check size={14} /> Save and continue
                       </button>
                     </div>
                   </div>
@@ -757,11 +757,11 @@ export default function App() {
                 {shouldShowProfileReminder && (
                   <div className="card profile-reminder fade-in">
                     <div>
-                      <p className="profile-reminder-title">Werk je profiel nog even af.</p>
-                      <p className="profile-reminder-copy">Kies nog even je rol voor betere ranking. Skills kan je later rustig aanvullen in Profiel.</p>
+                      <p className="profile-reminder-title">Finish your profile.</p>
+                      <p className="profile-reminder-copy">Choose your role for better ranking. You can add skills later in Profile.</p>
                     </div>
                     <button type="button" onClick={openProfileEditor} className="btn-secondary">
-                      Profiel afmaken
+                      Complete profile
                     </button>
                   </div>
                 )}
@@ -772,15 +772,15 @@ export default function App() {
                       type="text" value={nicheInput}
                       onChange={e => setNicheInput(e.target.value)}
                       onKeyDown={e => e.key === 'Enter' && handleDiscoverNiche()}
-                      placeholder="Vul een niche in, bijv. freelancing, fitness, SaaS..."
+                      placeholder="Enter a niche, e.g. freelancing, fitness, SaaS..."
                       className="input"
                     />
                     <button onClick={handleDiscoverNiche} disabled={isDiscovering || !nicheInput.trim()} className="btn-primary">
-                      {isDiscovering ? <><Loader2 size={14} className="spin" /> Zoeken...</> : <><Search size={14} /> Zoek subreddits</>}
+                      {isDiscovering ? <><Loader2 size={14} className="spin" /> Searching...</> : <><Search size={14} /> Find subreddits</>}
                     </button>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 14, flexWrap: 'wrap' }}>
-                    <span style={{ fontSize: '0.75rem', color: '#444' }}>Probeer:</span>
+                    <span style={{ fontSize: '0.75rem', color: '#444' }}>Try:</span>
                     {['freelancing', 'fitness', 'SaaS', 'parenting', 'investing', 'dating'].map(ex => (
                       <button key={ex} onClick={() => { setNicheInput(ex); }} className="sub-chip selected" style={{ fontSize: '0.75rem', padding: '3px 10px' }}>
                         {ex}
@@ -798,7 +798,7 @@ export default function App() {
           <>
             <div className="card action-bar fade-in">
               <button onClick={() => setStep(1)} className="btn-secondary">
-                <ArrowLeft size={14} /> Terug
+                <ArrowLeft size={14} /> Back
               </button>
               <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                 <select value={sortOption} onChange={e => setSortOption(e.target.value)} className="select">
@@ -809,16 +809,16 @@ export default function App() {
                 </select>
                 <button onClick={handleFetchPosts} disabled={isFetching || selectedSubs.size === 0} className="btn-primary">
                   {isFetching
-                    ? <><Loader2 size={14} className="spin" /> {fetchingSub ? `r/${fetchingSub}...` : 'Laden...'}</>
-                    : <>Posts ophalen ({selectedSubs.size}) <ArrowRight size={14} /></>}
+                    ? <><Loader2 size={14} className="spin" /> {fetchingSub ? `r/${fetchingSub}...` : 'Loading...'}</>
+                    : <>Fetch posts ({selectedSubs.size}) <ArrowRight size={14} /></>}
                 </button>
               </div>
             </div>
 
             <div className="card fade-in">
               <div className="posts-heading" style={{ marginBottom: 14 }}>
-                Subreddits voor <span style={{ color: '#a78bfa' }}>{nicheInput}</span>
-                <span className="posts-range"> — klik om te de-selecteren</span>
+                Subreddits for <span style={{ color: '#a78bfa' }}>{nicheInput}</span>
+                <span className="posts-range"> — click to deselect</span>
               </div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
                 {suggestedSubs.map(sub => (
@@ -849,37 +849,37 @@ export default function App() {
                 </span>
                 {proStatus ? (
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <label style={{ fontSize: '0.78rem', color: '#666', whiteSpace: 'nowrap' }}>Analyseer top:</label>
+                    <label style={{ fontSize: '0.78rem', color: '#666', whiteSpace: 'nowrap' }}>Analyze top:</label>
                     <select
                       value={analyzeLimit}
                       onChange={e => setAnalyzeLimit(Number(e.target.value))}
                       className="select select-small"
                     >
-                      <option value={50}>50 van {parsedPosts.length}</option>
-                      <option value={100}>100 van {parsedPosts.length}</option>
-                      <option value={200}>200 van {parsedPosts.length}</option>
-                      <option value={500}>500 van {parsedPosts.length}</option>
-                      <option value={0}>Alle {parsedPosts.length}</option>
+                      <option value={50}>50 of {parsedPosts.length}</option>
+                      <option value={100}>100 of {parsedPosts.length}</option>
+                      <option value={200}>200 of {parsedPosts.length}</option>
+                      <option value={500}>500 of {parsedPosts.length}</option>
+                      <option value={0}>All {parsedPosts.length}</option>
                     </select>
                     <span style={{ fontSize: '0.72rem', color: '#555' }}>
                       = ~{Math.ceil(Math.min(analyzeLimit || parsedPosts.length, parsedPosts.length) / BATCH_SIZE)} batches
                     </span>
                   </div>
                 ) : (
-                  <span style={{ fontSize: '0.78rem', color: '#888' }}>Alle {parsedPosts.length} posts analyseren</span>
+                  <span style={{ fontSize: '0.78rem', color: '#888' }}>Analyzing all {parsedPosts.length} posts</span>
                 )}
                 {painPoints.length > 0 ? (
                   <>
                     <button onClick={() => setStep(4)} className="btn-primary">
-                      <CheckCircle2 size={14} /> Bekijk resultaten ({painPoints.length})
+                      <CheckCircle2 size={14} /> View results ({painPoints.length})
                     </button>
                     <button onClick={processPosts} className="btn-secondary" style={{ fontSize: '0.78rem' }}>
-                      Opnieuw analyseren
+                      Re-analyze
                     </button>
                   </>
                 ) : (
                   <button onClick={processPosts} className="btn-primary">
-                    Analyseer <ArrowRight size={14} />
+                    Analyze <ArrowRight size={14} />
                   </button>
                 )}
               </div>
@@ -917,7 +917,7 @@ export default function App() {
           </>
         )}
 
-        {/* ==================== STEP 4: PIJNPUNTEN ==================== */}
+        {/* ==================== STEP 4: PAIN POINTS ==================== */}
         {step === 4 && (
           <>
             <div className="card action-bar fade-in">
@@ -950,10 +950,10 @@ export default function App() {
                     Via <span style={{ color: '#a78bfa' }}>{activeModel}</span>
                   </span>
                   <span className="progress-label">
-                    <span style={{ color: '#4ade80', fontWeight: 700 }}>{painPoints.length} gevonden</span>
+                    <span style={{ color: '#4ade80', fontWeight: 700 }}>{painPoints.length} found</span>
                     <span style={{ color: '#444', margin: '0 8px' }}>·</span>
-                    {progress.processed} / {analyzedCount} geanalyseerd
-                    <span style={{ color: '#444', margin: '0 4px' }}>van</span>
+                    {progress.processed} / {analyzedCount} analyzed
+                    <span style={{ color: '#444', margin: '0 4px' }}>of</span>
                     {parsedPosts.length} posts
                   </span>
                 </div>
@@ -961,20 +961,20 @@ export default function App() {
                   <div className="progress-fill gradient" style={{ width: `${progress.total > 0 ? (progress.processed / progress.total) * 100 : 0}%` }} />
                 </div>
                 <p className="progress-hint" style={{ marginTop: 8 }}>
-                  Batch {Math.min(Math.ceil(progress.processed / BATCH_SIZE) + 1, Math.ceil(progress.total / BATCH_SIZE))} / {Math.ceil(progress.total / BATCH_SIZE)} wordt geanalyseerd...
+                  Analyzing posts...
                 </p>
               </div>
             )}
 
             {painPoints.length > 0 && (
               <>
-                {/* AI Samenvatting */}
+                {/* AI Summary */}
                 {summary && !isProcessing && (
                   proStatus ? (
                     <div className="card fade-in" style={{ borderColor: 'rgba(99,102,241,0.3)', background: 'rgba(99,102,241,0.05)' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
                         <Crosshair size={15} style={{ color: '#a78bfa' }} />
-                        <span style={{ fontWeight: 700, fontSize: '0.9rem', color: '#c7d2fe' }}>Samenvatting</span>
+                        <span style={{ fontWeight: 700, fontSize: '0.9rem', color: '#c7d2fe' }}>Summary</span>
                         <div style={{ display: 'flex', gap: 6, marginLeft: 'auto', flexWrap: 'wrap' }}>
                           {summary.top_categories.map(c => <span key={c} className="category-badge">{c}</span>)}
                         </div>
@@ -987,7 +987,7 @@ export default function App() {
                     <div className="card fade-in summary-locked" onClick={() => setShowUpgrade(true)} style={{ borderColor: 'rgba(99,102,241,0.3)', background: 'rgba(99,102,241,0.05)', cursor: 'pointer', position: 'relative', overflow: 'hidden' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
                         <Crosshair size={15} style={{ color: '#a78bfa' }} />
-                        <span style={{ fontWeight: 700, fontSize: '0.9rem', color: '#c7d2fe' }}>Samenvatting</span>
+                        <span style={{ fontWeight: 700, fontSize: '0.9rem', color: '#c7d2fe' }}>Summary</span>
                         <span className="pro-badge" style={{ marginLeft: 8 }}>Pro</span>
                       </div>
                       <div style={{ filter: 'blur(6px)', userSelect: 'none' }}>
@@ -996,7 +996,7 @@ export default function App() {
                         </ul>
                       </div>
                       <div className="blur-upgrade-cta" style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(10,10,10,0.5)' }}>
-                        <Lock size={16} /> <span style={{ marginLeft: 8 }}>Upgrade voor AI samenvatting</span>
+                        <Lock size={16} /> <span style={{ marginLeft: 8 }}>Upgrade for AI summary</span>
                       </div>
                     </div>
                   )
@@ -1009,20 +1009,20 @@ export default function App() {
                       <Search size={13} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: '#555' }} />
                       <input
                         type="text" value={ppFilter} onChange={e => setPpFilter(e.target.value)}
-                        placeholder="Zoek pijnpunten..."
+                        placeholder="Search pain points..."
                         className="input" style={{ paddingLeft: 30, fontSize: '0.82rem' }}
                       />
                     </div>
                     <select value={ppCategory} onChange={e => setPpCategory(e.target.value)} className="select select-small">
-                      <option value="all">Alle categorieën</option>
+                      <option value="all">All categories</option>
                       {uniqueCategories.map(c => <option key={c} value={c}>{c}</option>)}
                     </select>
                     <select value={ppSort} onChange={e => setPpSort(e.target.value as 'score' | 'category')} className="select select-small">
                       <option value="score">Score ↓</option>
-                      <option value="category">Categorie A→Z</option>
+                      <option value="category">Category A→Z</option>
                     </select>
                     <span style={{ fontSize: '0.78rem', color: '#555', whiteSpace: 'nowrap' }}>
-                      {filteredPainPoints.length} van {painPoints.length}
+                      {filteredPainPoints.length} of {painPoints.length}
                     </span>
                   </div>
                 </div>
@@ -1030,9 +1030,9 @@ export default function App() {
                 <div className="results-header card fade-in">
                   <div>
                     <h2 className="results-title">
-                      {isProcessing ? `${painPoints.length} pijnpunten gevonden (bezig...)` : `${totalPainPointsFound || painPoints.length} pijnpunten gevonden`}
+                      {isProcessing ? `${painPoints.length} pain points found (analyzing...)` : `${totalPainPointsFound || painPoints.length} pain points found`}
                     </h2>
-                    <p className="results-subtitle">Uit {analyzedCount} geanalyseerde posts · {parsedPosts.length} totaal opgehaald</p>
+                    <p className="results-subtitle">From {analyzedCount} analyzed posts · {parsedPosts.length} total fetched</p>
                   </div>
                 </div>
 
@@ -1046,8 +1046,8 @@ export default function App() {
                     <div className="upgrade-banner" onClick={() => setShowUpgrade(true)}>
                       <Zap size={18} style={{ color: '#a78bfa' }} />
                       <div>
-                        <div style={{ fontWeight: 700, fontSize: '0.95rem' }}>+{totalPainPointsFound - FREE_VISIBLE_PAIN_POINTS} pijnpunten beschikbaar</div>
-                        <div style={{ fontSize: '0.8rem', color: '#888' }}>Upgrade naar Pro om alles te zien</div>
+                        <div style={{ fontWeight: 700, fontSize: '0.95rem' }}>+{totalPainPointsFound - FREE_VISIBLE_PAIN_POINTS} more pain points available</div>
+                        <div style={{ fontSize: '0.8rem', color: '#888' }}>Upgrade to Pro to see everything</div>
                       </div>
                       <ArrowRight size={16} style={{ color: '#a78bfa', marginLeft: 'auto' }} />
                     </div>
@@ -1059,20 +1059,20 @@ export default function App() {
             {!isProcessing && painPoints.length === 0 && error && parsedPosts.length > 0 && (
               <div className="card analysis-error-card fade-in">
                 <div>
-                  <p className="analysis-error-title">De AI-analyse liep vast, maar je posts staan nog klaar.</p>
+                  <p className="analysis-error-title">AI analysis failed, but your posts are still ready.</p>
                   <p className="analysis-error-copy">
-                    {parsedPosts.length} opgehaalde posts blijven bewaard. Je kan meteen opnieuw analyseren of eerst terug naar de posts.
+                    {parsedPosts.length} fetched posts are preserved. You can retry immediately or go back to the posts.
                   </p>
                 </div>
                 <button onClick={processPosts} className="btn-secondary">
-                  Analyse opnieuw proberen
+                  Retry analysis
                 </button>
               </div>
             )}
 
             {!isProcessing && painPoints.length === 0 && !error && (
               <div className="card fade-in" style={{ textAlign: 'center', padding: 40 }}>
-                <p style={{ color: '#555', fontSize: '0.88rem' }}>Geen pijnpunten gevonden. Probeer een andere niche of meer posts.</p>
+                <p style={{ color: '#555', fontSize: '0.88rem' }}>No pain points found. Try a different niche or fetch more posts.</p>
               </div>
             )}
           </>
@@ -1091,15 +1091,15 @@ export default function App() {
             <div className="profile-editor-shell">
               <div className="profile-editor-top">
                 <div className="profile-editor-header">
-                  <h2 style={{ fontSize: '1.2rem', fontWeight: 700, marginBottom: 4 }}>{profile ? 'Jouw profiel' : 'Profiel afmaken'}</h2>
+                  <h2 style={{ fontSize: '1.2rem', fontWeight: 700, marginBottom: 4 }}>{profile ? 'Your profile' : 'Complete profile'}</h2>
                   <p style={{ fontSize: '0.82rem', color: '#888', margin: 0 }}>
                     {profile
-                      ? 'Werk je profiel bij zonder de rest van je flow te onderbreken.'
-                      : 'Kies je rol eerst. Skills en Pro beheer je in aparte tabs.'}
+                      ? 'Update your profile without interrupting your workflow.'
+                      : 'Choose your role first. Manage skills and Pro in separate tabs.'}
                   </p>
                 </div>
 
-                <div className="profile-tabs" role="tablist" aria-label="Profiel tabs">
+                <div className="profile-tabs" role="tablist" aria-label="Profile tabs">
                   {PROFILE_TABS.map(tab => (
                     <button
                       key={tab.id}
@@ -1119,8 +1119,8 @@ export default function App() {
                 {profileTab === 'basis' && (
                   <div className="profile-panel">
                     <div className="profile-panel-header">
-                      <h3>Basis</h3>
-                      <p>Rol is verplicht voor de ranking. Naam blijft optioneel.</p>
+                      <h3>Basics</h3>
+                      <p>Role is required for ranking. Name remains optional.</p>
                     </div>
 
                     <ProfileForm
@@ -1138,7 +1138,7 @@ export default function App() {
                     />
 
                     <button onClick={handleProfileEditorSave} className="btn-primary profile-save-btn" disabled={!canSubmitProfile}>
-                      <Check size={14} /> {profile ? 'Wijzigingen opslaan' : 'Profiel opslaan'}
+                      <Check size={14} /> {profile ? 'Save changes' : 'Save profile'}
                     </button>
                   </div>
                 )}
@@ -1147,7 +1147,7 @@ export default function App() {
                   <div className="profile-panel">
                     <div className="profile-panel-header">
                       <h3>Skills</h3>
-                      <p>Kies tot 5 skills. Ze zijn role-aware, maar blokkeren je analyseflow niet.</p>
+                      <p>Choose up to 5 skills. They are role-aware but won't block your analysis flow.</p>
                     </div>
 
                     <SkillsMultiSelect
@@ -1159,8 +1159,8 @@ export default function App() {
 
                     <p className="profile-panel-note">
                       {!profileRole
-                        ? 'Kies eerst je rol in Basis om skills te ontgrendelen.'
-                        : 'Je selectie wordt mee opgeslagen zodra je in Basis op Opslaan klikt.'}
+                        ? 'Choose your role in Basics first to unlock skills.'
+                        : 'Your selection will be saved when you click Save in Basics.'}
                     </p>
                   </div>
                 )}
@@ -1169,13 +1169,13 @@ export default function App() {
                   <div className="profile-panel">
                     <div className="profile-panel-header">
                       <h3>Pro</h3>
-                      <p>Activeer handmatig met een license key of controleer je huidige status.</p>
+                      <p>Activate manually with a license key or check your current status.</p>
                     </div>
 
                     <div className="profile-pro-card">
                       <div className="profile-pro-status">
                         <span className={`profile-status-pill ${proStatus ? 'active' : ''}`}>
-                          {proStatus ? 'Pro actief' : 'Free plan'}
+                          {proStatus ? 'Pro active' : 'Free plan'}
                         </span>
                         {proData?.email && <span className="profile-status-copy">{proData.email}</span>}
                       </div>
@@ -1193,7 +1193,7 @@ export default function App() {
                           style={{ fontSize: '0.88rem', flex: 1 }}
                         />
                         <button onClick={activateLicenseKey} className="btn-secondary" style={{ whiteSpace: 'nowrap' }}>
-                          Activeer
+                          Activate
                         </button>
                       </div>
                       {licenseMsg && (
@@ -1208,41 +1208,41 @@ export default function App() {
         </div>
       )}
 
-      {/* Upgrade modal — buiten container zodat footer er niet overheen komt */}
+      {/* Upgrade modal — outside container so footer doesn't overlap */}
       {showUpgrade && (
         <div className="modal-overlay" onClick={() => setShowUpgrade(false)}>
           <div className="modal-card" onClick={e => e.stopPropagation()}>
             <button className="modal-close" onClick={() => setShowUpgrade(false)}>×</button>
             <div style={{ textAlign: 'center', marginBottom: 24 }}>
               <Zap size={32} style={{ color: '#a78bfa', marginBottom: 8 }} />
-              <h2 style={{ fontSize: '1.4rem', fontWeight: 700, margin: '0 0 6px' }}>Upgrade naar Pro</h2>
-              <p style={{ color: '#888', fontSize: '0.88rem', margin: 0 }}>Onbeperkt niches analyseren, alle exports, AI samenvatting</p>
+              <h2 style={{ fontSize: '1.4rem', fontWeight: 700, margin: '0 0 6px' }}>Upgrade to Pro</h2>
+              <p style={{ color: '#888', fontSize: '0.88rem', margin: 0 }}>Unlimited niche analysis, all exports, AI summary</p>
             </div>
             <div style={{ display: 'flex', gap: 12, marginBottom: 20 }}>
               <a href={MONTHLY_URL} className="upgrade-option">
-                <div className="upgrade-price">€19<span>/maand</span></div>
-                <div className="upgrade-label">Maandelijks</div>
+                <div className="upgrade-price">€19<span>/mo</span></div>
+                <div className="upgrade-label">Monthly</div>
                 <ul className="upgrade-features">
-                  <li><Check size={11} /> Onbeperkte analyses</li>
+                  <li><Check size={11} /> Unlimited analyses</li>
                   <li><Check size={11} /> CSV + JSON + Markdown</li>
-                  <li><Check size={11} /> AI samenvatting</li>
-                  <li><Check size={11} /> 5 sessies opslaan</li>
+                  <li><Check size={11} /> AI summary</li>
+                  <li><Check size={11} /> Save 5 sessions</li>
                 </ul>
               </a>
               <a href={LIFETIME_URL} className="upgrade-option upgrade-option-featured">
-                <div className="upgrade-badge">Beste deal</div>
-                <div className="upgrade-price">€79<span> eenmalig</span></div>
+                <div className="upgrade-badge">Best deal</div>
+                <div className="upgrade-price">€79<span> one-time</span></div>
                 <div className="upgrade-label">Lifetime</div>
                 <ul className="upgrade-features">
-                  <li><Check size={11} /> Alles van Maandelijks</li>
-                  <li><Check size={11} /> Betaal eenmalig</li>
-                  <li><Check size={11} /> Alle toekomstige updates</li>
-                  <li><Check size={11} /> Prioriteit support</li>
+                  <li><Check size={11} /> Everything in Monthly</li>
+                  <li><Check size={11} /> Pay once</li>
+                  <li><Check size={11} /> All future updates</li>
+                  <li><Check size={11} /> Priority support</li>
                 </ul>
               </a>
             </div>
             <p style={{ textAlign: 'center', fontSize: '0.75rem', color: '#555', margin: 0 }}>
-              <Lock size={11} /> Veilige betaling via Stripe · Direct actief na betaling
+              <Lock size={11} /> Secure payment via Stripe · Active immediately after payment
             </p>
           </div>
         </div>
