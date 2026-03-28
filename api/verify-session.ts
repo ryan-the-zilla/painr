@@ -32,7 +32,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const plan = isLifetime ? 'lifetime' : 'monthly';
     const email = session.customer_details?.email ?? null;
 
-    const token = await signProToken({ plan, email, sessionId: session_id });
+    const token = signProToken({ plan, email, sessionId: session_id });
 
     return res.status(200).json({
       valid: true,

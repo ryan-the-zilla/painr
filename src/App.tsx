@@ -23,6 +23,7 @@ interface PainPoint {
 interface Summary {
   summary: string[];
   top_categories: string[];
+  skill_opportunities?: string[];
 }
 
 const BATCH_SIZE = 20;
@@ -413,7 +414,7 @@ export default function App() {
       const res = await fetch('/api/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
-        body: JSON.stringify({ posts: postsToAnalyze.map(p => ({ title: p.title, selftext: p.selftext, permalink: p.permalink, score: p.score })) }),
+        body: JSON.stringify({ posts: postsToAnalyze.map(p => ({ title: p.title, selftext: p.selftext, permalink: p.permalink, score: p.score })), skills: profile?.skills ?? [] }),
       });
 
       if (!res.ok) {
@@ -982,6 +983,17 @@ export default function App() {
                       <ul style={{ paddingLeft: 18, display: 'flex', flexDirection: 'column', gap: 6 }}>
                         {summary.summary.map((s, i) => <li key={i} style={{ fontSize: '0.85rem', color: '#bbb' }}>{s}</li>)}
                       </ul>
+                      {summary.skill_opportunities && summary.skill_opportunities.length > 0 && (
+                        <div style={{ marginTop: 14, borderTop: '1px solid rgba(99,102,241,0.2)', paddingTop: 12 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+                            <Zap size={13} style={{ color: '#a78bfa' }} />
+                            <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#a78bfa' }}>Opportunities for your skills</span>
+                          </div>
+                          <ul style={{ paddingLeft: 18, display: 'flex', flexDirection: 'column', gap: 5 }}>
+                            {summary.skill_opportunities.map((s, i) => <li key={i} style={{ fontSize: '0.82rem', color: '#c7d2fe' }}>{s}</li>)}
+                          </ul>
+                        </div>
+                      )}
                     </div>
                   ) : (
                     <div className="card fade-in summary-locked" onClick={() => setShowUpgrade(true)} style={{ borderColor: 'rgba(99,102,241,0.3)', background: 'rgba(99,102,241,0.05)', cursor: 'pointer', position: 'relative', overflow: 'hidden' }}>

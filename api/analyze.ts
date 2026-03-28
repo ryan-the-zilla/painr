@@ -64,10 +64,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-  // Auth check
+  // Auth check (sync now — no jose dependency)
   const authHeader = req.headers.authorization;
   const token = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null;
-  const proPayload = token ? await verifyProToken(token) : null;
+  const proPayload = token ? verifyProToken(token) : null;
   const isPro = !!proPayload;
 
   // Rate limit free users
@@ -79,23 +79,25 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (!usage.allowed) {
       return res.status(403).json({
         error: 'limit_reached',
-        message: 'Je gratis analyses zijn op. Upgrade naar Pro voor onbeperkte toegang.',
+        message: 'Your free analyses are used up. Upgrade to Pro for unlimited access.',
         monthly_url: process.env.MONTHLY_URL,
         lifetime_url: process.env.LIFETIME_URL,
       });
     }
   }
 
-  const { posts } = req.body || {};
+  const { posts, skills } = req.body || {};
   if (!Array.isArray(posts) || posts.length === 0) {
     return res.status(400).json({ error: 'Missing posts array' });
   }
+
+  const userSkills: string[] = Array.isArray(skills) ? skills.filter((s: unknown) => typeof s === 'string') : [];
 
   const postsToAnalyze: Post[] = isPro ? posts : posts.slice(0, 100);
   const allPainPoints: PainPoint[] = [];
 
   try {
-    // Analyse in batches
+    // Analyze in batches
     for (let i = 0; i < postsToAnalyze.length; i += BATCH_SIZE) {
       const batch = postsToAnalyze.slice(i, i + BATCH_SIZE);
       const prompt = `Analyze these Reddit posts. Return only posts with a real problem, frustration, or unmet need. Ignore spam and self-promotion. Return JSON array: [{title, pain_summary, category, reddit_link, score}]\n\nPosts:\n${JSON.stringify(batch.map(p => ({ t: p.title, b: (p.selftext || '').slice(0, 300), l: p.permalink, s: p.score })))}`;
@@ -120,16 +122,24 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const returnedPoints = isPro ? allPainPoints : allPainPoints.slice(0, FREE_VISIBLE);
   const truncated = !isPro && totalFound > FREE_VISIBLE;
 
-  // AI summary alleen voor pro
+  // AI summary (pro only) — includes skill-based recommendations if skills are provided
   let summary = null;
   if (isPro && allPainPoints.length > 0) {
     try {
+      const skillsContext = userSkills.length > 0
+        ? `\n\nThe user has these skills: ${userSkills.join(', ')}. For each top category, suggest how someone with these skills could build a product or solution to address these pain points. Add a "skill_opportunities" array to the JSON with 2-3 actionable ideas.`
+        : '';
+
+      const summarySchema = userSkills.length > 0
+        ? '{"summary": ["bullet1","bullet2","bullet3"], "top_categories": ["cat1","cat2","cat3"], "skill_opportunities": ["idea1","idea2","idea3"]}'
+        : '{"summary": ["bullet1","bullet2","bullet3"], "top_categories": ["cat1","cat2","cat3"]}';
+
       const text = await callAIWithFallback([
         { role: 'system', content: 'Return only valid JSON, no markdown.' },
-        { role: 'user', content: `Analyze these pain points and return a summary. Return JSON: {"summary": ["bullet1","bullet2","bullet3"], "top_categories": ["cat1","cat2","cat3"]}\n\nPain points:\n${JSON.stringify(allPainPoints.map(p => ({ title: p.title, category: p.category, summary: p.pain_summary })))}` },
+        { role: 'user', content: `Analyze these pain points and return a summary. Return JSON: ${summarySchema}\n\nPain points:\n${JSON.stringify(allPainPoints.map(p => ({ title: p.title, category: p.category, summary: p.pain_summary })))}${skillsContext}` },
       ]);
       if (text) summary = parseJSON(text);
-    } catch { /* summary is optioneel */ }
+    } catch { /* summary is optional */ }
   }
 
   return res.status(200).json({ painPoints: returnedPoints, totalFound, truncated, summary });

@@ -1,15 +1,15 @@
-import { createHash } from 'crypto';
+import { createHash } from 'node:crypto';
 
 const FREE_ANALYSIS_LIMIT = 3;
 const THIRTY_DAYS = 60 * 60 * 24 * 30;
 
-const kvAvailable = !!(process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN);
+const kvAvailable = !!(process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN);
 
-async function getKV() {
+async function getRedis() {
   if (!kvAvailable) return null;
   try {
-    const { kv } = await import('@vercel/kv');
-    return kv;
+    const { Redis } = await import('@upstash/redis');
+    return Redis.fromEnv();
   } catch {
     return null;
   }
@@ -20,18 +20,18 @@ export function getFingerprint(ip: string, ua: string): string {
 }
 
 export async function checkAndIncrementFreeUsage(fingerprint: string): Promise<{ allowed: boolean; remaining: number }> {
-  const kv = await getKV();
-  if (!kv) return { allowed: true, remaining: FREE_ANALYSIS_LIMIT };
+  const redis = await getRedis();
+  if (!redis) return { allowed: true, remaining: FREE_ANALYSIS_LIMIT };
 
   try {
     const key = `usage:${fingerprint}`;
-    const count = (await kv.get<number>(key)) ?? 0;
+    const count = (await redis.get<number>(key)) ?? 0;
 
     if (count >= FREE_ANALYSIS_LIMIT) {
       return { allowed: false, remaining: 0 };
     }
 
-    await kv.set(key, count + 1, { ex: THIRTY_DAYS });
+    await redis.set(key, count + 1, { ex: THIRTY_DAYS });
     return { allowed: true, remaining: FREE_ANALYSIS_LIMIT - count - 1 };
   } catch {
     return { allowed: true, remaining: FREE_ANALYSIS_LIMIT };
